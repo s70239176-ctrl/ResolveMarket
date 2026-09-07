@@ -31,6 +31,7 @@ async function getSdk() {
 function chainFromModule(chains: any) {
   if (ACTIVE_NETWORK.name === "bradbury") return chains.testnetBradbury ?? chains.bradbury;
   if (ACTIVE_NETWORK.name === "studionet") return chains.studionet;
+  if (ACTIVE_NETWORK.name === "studio-dev") return chains.studioDevnet ?? chains.studioDev;
   return chains.localnet ?? chains.studioDevnet;
 }
 

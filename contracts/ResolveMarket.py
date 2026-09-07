@@ -1,10 +1,8 @@
 # v0.3.0
 # { "Depends": "py-genlayer:5jycge4q8k23462jtb0b9fyey1s9qz928sz2nbrd9mg4sxqg2qng" }
 import genlayer as gl
-from genlayer.storage import TreeMap
 from genlayer.types import *
 
-from datetime import datetime, timezone
 import json
 
 
@@ -12,31 +10,31 @@ class Contract(gl.contract.Contract):
     owner: Address
     market_count: u64
 
-    questions: TreeMap[str, str]
-    descriptions: TreeMap[str, str]
-    source_urls: TreeMap[str, str]
-    source_names: TreeMap[str, str]
-    yes_labels: TreeMap[str, str]
-    no_labels: TreeMap[str, str]
-    deadlines: TreeMap[str, u64]
-    yes_pools: TreeMap[str, u256]
-    no_pools: TreeMap[str, u256]
-    resolved: TreeMap[str, bool]
-    winners: TreeMap[str, u256]
-    resolution_excerpts: TreeMap[str, str]
-    cancelled: TreeMap[str, bool]
+    questions: gl.storage.TreeMap[str, str]
+    descriptions: gl.storage.TreeMap[str, str]
+    source_urls: gl.storage.TreeMap[str, str]
+    source_names: gl.storage.TreeMap[str, str]
+    yes_labels: gl.storage.TreeMap[str, str]
+    no_labels: gl.storage.TreeMap[str, str]
+    deadlines: gl.storage.TreeMap[str, u64]
+    yes_pools: gl.storage.TreeMap[str, u256]
+    no_pools: gl.storage.TreeMap[str, u256]
+    resolved: gl.storage.TreeMap[str, bool]
+    winners: gl.storage.TreeMap[str, u256]
+    resolution_excerpts: gl.storage.TreeMap[str, str]
+    cancelled: gl.storage.TreeMap[str, bool]
 
-    stake_yes: TreeMap[str, u256]
-    stake_no: TreeMap[str, u256]
-    claimed: TreeMap[str, bool]
-    withdrawable: TreeMap[str, u256]
+    stake_yes: gl.storage.TreeMap[str, u256]
+    stake_no: gl.storage.TreeMap[str, u256]
+    claimed: gl.storage.TreeMap[str, bool]
+    withdrawable: gl.storage.TreeMap[str, u256]
 
     def __init__(self):
         self.owner = gl.message.sender_address
         self.market_count = u64(0)
 
     def _now(self) -> u64:
-        return u64(int(datetime.now(timezone.utc).timestamp()))
+        return u64(int(gl.vm.get_timestamp().timestamp()))
 
     def _market_key(self, market_id: u64) -> str:
         return str(market_id)
@@ -84,7 +82,7 @@ class Contract(gl.contract.Contract):
 
     @gl.public.view
     def get_owner(self) -> str:
-        return str(self.owner)
+        return self.owner.as_hex
 
     @gl.public.view
     def get_market_count(self) -> u64:

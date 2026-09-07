@@ -41,7 +41,7 @@ Set these in `.env.local` for local use and in Vercel for hosted demos:
 ```bash
 NEXT_PUBLIC_CONTRACT_ADDRESS=0x...
 NEXT_PUBLIC_NETWORK=bradbury
-NEXT_PUBLIC_CHAIN_ID=61999
+NEXT_PUBLIC_CHAIN_ID=4221
 NEXT_PUBLIC_RPC_URL=
 NEXT_PUBLIC_EXPLORER_URL=
 NEXT_PUBLIC_FAUCET_URL=https://testnet-faucet.genlayer.foundation

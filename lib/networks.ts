@@ -1,4 +1,4 @@
-export type NetworkName = "bradbury" | "studionet" | "localnet";
+export type NetworkName = "bradbury" | "studionet" | "studio-dev" | "localnet";
 
 export type ResolveNetwork = {
   name: NetworkName;
@@ -12,14 +12,16 @@ export type ResolveNetwork = {
 const selected = (process.env.NEXT_PUBLIC_NETWORK ?? "bradbury") as NetworkName;
 
 const fallbackChainIds: Record<NetworkName, number> = {
-  bradbury: 61999,
-  studionet: 61998,
-  localnet: 61997
+  bradbury: 4221,
+  studionet: 61999,
+  "studio-dev": 61997,
+  localnet: 61127
 };
 
 const labels: Record<NetworkName, string> = {
   bradbury: "GenLayer Testnet Bradbury",
   studionet: "GenLayer Studionet",
+  "studio-dev": "GenLayer Studio development preview",
   localnet: "GenLayer Localnet"
 };
 
