@@ -1,0 +1,30 @@
+{
+  "name": "resolve-genlayer-market",
+  "version": "0.1.0",
+  "private": true,
+  "description": "Resolve: a curated prediction market dApp on GenLayer.",
+  "scripts": {
+    "dev": "next dev",
+    "build": "next build",
+    "start": "next start",
+    "lint": "next lint",
+    "typecheck": "tsc --noEmit",
+    "schema:check": "node scripts/check-schema.mjs"
+  },
+  "dependencies": {
+    "@types/node": "^22.5.4",
+    "@types/react": "^18.3.5",
+    "@types/react-dom": "^18.3.0",
+    "autoprefixer": "^10.4.20",
+    "clsx": "^2.1.1",
+    "genlayer-js": "^0.19.0-rc.12",
+    "lucide-react": "^0.468.0",
+    "next": "^14.2.11",
+    "postcss": "^8.4.45",
+    "react": "^18.3.1",
+    "react-dom": "^18.3.1",
+    "tailwindcss": "^3.4.10",
+    "typescript": "^5.6.2"
+  },
+  "devDependencies": {}
+}
