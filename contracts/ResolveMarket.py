@@ -3,6 +3,7 @@
 import genlayer as gl
 from genlayer.types import *
 
+from datetime import datetime, timezone
 import json
 
 
@@ -34,7 +35,7 @@ class Contract(gl.contract.Contract):
         self.market_count = u64(0)
 
     def _now(self) -> u64:
-        return u64(int(gl.vm.get_timestamp().timestamp()))
+        return u64(int(datetime.now(timezone.utc).timestamp()))
 
     def _market_key(self, market_id: u64) -> str:
         return str(market_id)

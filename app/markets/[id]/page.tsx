@@ -44,11 +44,32 @@ export default function MarketDetail({ params }: { params: { id: string } }) {
       const tx = await action();
       setHash(tx.hash);
       setStatus("finalized");
-      await load();
+      try {
+        await load();
+      } catch (refreshError) {
+        setError(`Transaction finalized, but the market refresh failed: ${humanizeError(refreshError)}`);
+      }
     } catch (err) {
       setStatus("failed");
       setError(humanizeError(err));
     }
+  }
+
+  function handleStake() {
+    if (!wallet.address) {
+      setError("Connect your wallet before staking.");
+      return;
+    }
+    const value = parseGEN(amount);
+    if (value <= 0n) {
+      setError("Enter a stake amount greater than 0 GEN.");
+      return;
+    }
+    if (wallet.balance !== undefined && value > wallet.balance) {
+      setError("Your wallet does not have enough GEN for this stake and network fees.");
+      return;
+    }
+    void runWrite(() => stakeMarket(wallet.address!, id, side, value));
   }
 
   if (!market) {
@@ -117,7 +138,7 @@ export default function MarketDetail({ params }: { params: { id: string } }) {
           <button
             className="focus-ring mt-4 inline-flex w-full items-center justify-center gap-2 rounded-md bg-ink px-4 py-3 font-bold text-white disabled:cursor-not-allowed disabled:opacity-50"
             disabled={disabled || closed || market.resolved || market.cancelled}
-            onClick={() => wallet.address && runWrite(() => stakeMarket(wallet.address!, id, side, parseGEN(amount)))}
+            onClick={handleStake}
           >
             <WalletCards size={18} aria-hidden />
             Stake
@@ -126,6 +147,9 @@ export default function MarketDetail({ params }: { params: { id: string } }) {
             <span>Your yes: {formatGEN(stake.yes)}</span>
             <span>Your no: {formatGEN(stake.no)}</span>
           </div>
+          {!wallet.connected ? <p className="mt-3 text-sm text-coral">Connect your wallet to stake.</p> : null}
+          {wallet.wrongNetwork ? <p className="mt-3 text-sm text-coral">Switch to the configured GenLayer network first.</p> : null}
+          {closed ? <p className="mt-3 text-sm text-coral">This market is past its staking deadline.</p> : null}
         </div>
 
         <div className="rounded-md border border-line bg-white p-5 shadow-soft">
