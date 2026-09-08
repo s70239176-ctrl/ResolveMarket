@@ -5,6 +5,7 @@ import { LogOut, PlugZap, Wallet } from "lucide-react";
 import { useWallet } from "./WalletProvider";
 import { truncateAddress } from "@/lib/time";
 import { ACTIVE_NETWORK } from "@/lib/networks";
+import { formatGEN } from "@/lib/genlayer";
 
 export function Header() {
   const wallet = useWallet();
@@ -37,13 +38,18 @@ export function Header() {
             </button>
           ) : null}
           {wallet.connected ? (
-            <button
-              className="focus-ring inline-flex items-center gap-2 rounded-md border border-line px-3 py-2 text-sm font-bold"
-              onClick={wallet.disconnect}
-            >
-              <LogOut size={16} aria-hidden />
-              {truncateAddress(wallet.address)}
-            </button>
+            <div className="flex items-center gap-2">
+              <span className="rounded-md border border-line px-3 py-2 text-sm font-bold">
+                {wallet.balance === undefined ? "GEN --" : formatGEN(wallet.balance)}
+              </span>
+              <button
+                className="focus-ring inline-flex items-center gap-2 rounded-md border border-line px-3 py-2 text-sm font-bold"
+                onClick={wallet.disconnect}
+              >
+                <LogOut size={16} aria-hidden />
+                {truncateAddress(wallet.address)}
+              </button>
+            </div>
           ) : (
             <button
               className="focus-ring inline-flex items-center gap-2 rounded-md bg-ink px-3 py-2 text-sm font-bold text-white"

@@ -7,6 +7,7 @@ import { type Address } from "@/lib/contract";
 type WalletContextValue = {
   address?: Address;
   chainId?: number;
+  balance?: bigint;
   connected: boolean;
   wrongNetwork: boolean;
   connect: () => Promise<void>;
@@ -19,21 +20,37 @@ const WalletContext = createContext<WalletContextValue | undefined>(undefined);
 export function WalletProvider({ children }: { children: React.ReactNode }) {
   const [address, setAddress] = useState<Address | undefined>();
   const [chainId, setChainId] = useState<number | undefined>();
+  const [balance, setBalance] = useState<bigint | undefined>();
 
   const refreshChain = useCallback(async () => {
     const id = await window.ethereum?.request({ method: "eth_chainId" });
     if (id) setChainId(Number.parseInt(String(id), 16));
   }, []);
 
+  const refreshBalance = useCallback(async (walletAddress?: Address) => {
+    if (!walletAddress || !window.ethereum) {
+      setBalance(undefined);
+      return;
+    }
+    const raw = await window.ethereum.request({
+      method: "eth_getBalance",
+      params: [walletAddress, "latest"]
+    });
+    setBalance(BigInt(String(raw)));
+  }, []);
+
   const connect = useCallback(async () => {
     if (!window.ethereum) throw new Error("Install MetaMask to connect.");
     const accounts = await window.ethereum.request({ method: "eth_requestAccounts" });
-    setAddress(accounts?.[0] as Address | undefined);
+    const nextAddress = accounts?.[0] as Address | undefined;
+    setAddress(nextAddress);
     await refreshChain();
-  }, [refreshChain]);
+    await refreshBalance(nextAddress);
+  }, [refreshBalance, refreshChain]);
 
   const disconnect = useCallback(() => {
     setAddress(undefined);
+    setBalance(undefined);
   }, []);
 
   const switchNetwork = useCallback(async () => {
@@ -59,32 +76,41 @@ export function WalletProvider({ children }: { children: React.ReactNode }) {
       });
     }
     await refreshChain();
-  }, [refreshChain]);
+    await refreshBalance(address);
+  }, [address, refreshBalance, refreshChain]);
 
   useEffect(() => {
     if (!window.ethereum) return;
     refreshChain();
-    const onAccounts = (accounts: string[]) => setAddress(accounts?.[0] as Address | undefined);
-    const onChain = (id: string) => setChainId(Number.parseInt(id, 16));
+    const onAccounts = (accounts: string[]) => {
+      const nextAddress = accounts?.[0] as Address | undefined;
+      setAddress(nextAddress);
+      void refreshBalance(nextAddress);
+    };
+    const onChain = (id: string) => {
+      setChainId(Number.parseInt(id, 16));
+      void refreshBalance(address);
+    };
     window.ethereum.on?.("accountsChanged", onAccounts);
     window.ethereum.on?.("chainChanged", onChain);
     return () => {
       window.ethereum?.removeListener?.("accountsChanged", onAccounts);
       window.ethereum?.removeListener?.("chainChanged", onChain);
     };
-  }, [refreshChain]);
+  }, [address, refreshBalance, refreshChain]);
 
   const value = useMemo(
     () => ({
       address,
       chainId,
+      balance,
       connected: Boolean(address),
       wrongNetwork: Boolean(address && chainId && chainId !== ACTIVE_NETWORK.chainId),
       connect,
       disconnect,
       switchNetwork
     }),
-    [address, chainId, connect, disconnect, switchNetwork]
+    [address, balance, chainId, connect, disconnect, switchNetwork]
   );
 
   return <WalletContext.Provider value={value}>{children}</WalletContext.Provider>;
