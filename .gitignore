@@ -5,3 +5,5 @@ out/
 .env*.local
 work/npm-cache/
 npm-debug.log*
+tsconfig.tsbuildinfo
+*.zip
