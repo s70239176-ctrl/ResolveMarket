@@ -44,7 +44,11 @@ export default function MarketDetail({ params }: { params: { id: string } }) {
       const tx = await action();
       setHash(tx.hash);
       setStatus("finalized");
-      await load();
+      try {
+        await load();
+      } catch (refreshError) {
+        setError(`Transaction finalized, but the market refresh failed: ${humanizeError(refreshError)}`);
+      }
     } catch (err) {
       setStatus("failed");
       setError(humanizeError(err));
