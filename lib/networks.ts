@@ -25,11 +25,18 @@ const labels: Record<NetworkName, string> = {
   localnet: "GenLayer Localnet"
 };
 
+const defaultRpcUrls: Record<NetworkName, string> = {
+  bradbury: "https://rpc-bradbury.genlayer.com",
+  studionet: "https://studio.genlayer.com/api",
+  "studio-dev": "https://studio-dev.genlayer.com/api",
+  localnet: "http://127.0.0.1:4000/api"
+};
+
 export const ACTIVE_NETWORK: ResolveNetwork = {
   name: selected,
   label: labels[selected] ?? labels.bradbury,
   chainId: Number(process.env.NEXT_PUBLIC_CHAIN_ID ?? fallbackChainIds[selected] ?? fallbackChainIds.bradbury),
-  rpcUrl: process.env.NEXT_PUBLIC_RPC_URL,
+  rpcUrl: process.env.NEXT_PUBLIC_RPC_URL || defaultRpcUrls[selected] || defaultRpcUrls.bradbury,
   explorerUrl: process.env.NEXT_PUBLIC_EXPLORER_URL,
   faucetUrl: process.env.NEXT_PUBLIC_FAUCET_URL
 };
