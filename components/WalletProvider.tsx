@@ -36,6 +36,10 @@ export function WalletProvider({ children }: { children: React.ReactNode }) {
       method: "eth_getBalance",
       params: [walletAddress, "latest"]
     });
+    if (raw === undefined || raw === null || raw === "") {
+      setBalance(0n);
+      return;
+    }
     setBalance(BigInt(String(raw)));
   }, []);
 

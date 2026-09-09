@@ -22,6 +22,14 @@ function requireAddress(): Address {
   return CONTRACT_ADDRESS;
 }
 
+function toBigInt(value: unknown): bigint {
+  if (value === undefined || value === null || value === "") return 0n;
+  if (typeof value === "object" && value !== null && "value" in value) {
+    return toBigInt((value as { value?: unknown }).value);
+  }
+  return BigInt(value as bigint | number | string);
+}
+
 async function getSdk() {
   const sdk = await import("genlayer-js");
   const chains = await import("genlayer-js/chains");
@@ -128,11 +136,11 @@ export async function getStake(id: number, user: Address): Promise<Stake> {
 }
 
 export async function getClaimable(id: number, user: Address): Promise<bigint> {
-  return BigInt(await readContract("get_claimable", [id, user]));
+  return toBigInt(await readContract("get_claimable", [id, user]));
 }
 
 export async function getWithdrawable(user: Address): Promise<bigint> {
-  return BigInt(await readContract("get_withdrawable", [user]));
+  return toBigInt(await readContract("get_withdrawable", [user]));
 }
 
 export async function stakeMarket(account: Address, id: number, side: MarketSide, amountWei: bigint) {
