@@ -5,9 +5,16 @@ import { CONTRACT_ADDRESS, normalizeMarket, normalizeStake, type Address, type M
 
 type EthereumProvider = {
   request: (args: { method: string; params?: unknown[] | object }) => Promise<any>;
+  providers?: EthereumProvider[];
+  isRabby?: boolean;
   on?: (event: string, handler: (...args: any[]) => void) => void;
   removeListener?: (event: string, handler: (...args: any[]) => void) => void;
 };
+
+function walletProvider(): EthereumProvider | undefined {
+  const injected = window.ethereum;
+  return injected?.providers?.find((provider) => provider.isRabby) ?? injected;
+}
 
 declare global {
   interface Window {
@@ -54,7 +61,8 @@ export async function createReadClient() {
 }
 
 export async function createWriteClient(address: Address) {
-  if (!window.ethereum) throw new Error("MetaMask was not found.");
+  const provider = walletProvider();
+  if (!provider) throw new Error("Rabby wallet was not found.");
   const { sdk, chains } = await getSdk();
   const chain = chainFromModule(chains) ?? {
     id: ACTIVE_NETWORK.chainId,
@@ -64,7 +72,7 @@ export async function createWriteClient(address: Address) {
   const client = sdk.createClient({
     chain,
     account: address,
-    provider: window.ethereum
+    provider
   });
   // Keep the explicit-chain fallback for older SDK releases and custom Studio networks.
   if (typeof client.connect === "function" && ACTIVE_NETWORK.name !== "studio-dev") {

@@ -4,6 +4,20 @@ import { createContext, useCallback, useContext, useEffect, useMemo, useState } 
 import { ACTIVE_NETWORK, chainIdHex } from "@/lib/networks";
 import { type Address } from "@/lib/contract";
 
+type EthereumProvider = {
+  request: (args: { method: string; params?: unknown[] | object }) => Promise<any>;
+  providers?: EthereumProvider[];
+  isRabby?: boolean;
+  on?: (event: string, handler: (...args: any[]) => void) => void;
+  removeListener?: (event: string, handler: (...args: any[]) => void) => void;
+};
+
+declare global {
+  interface Window {
+    ethereum?: EthereumProvider;
+  }
+}
+
 type WalletContextValue = {
   address?: Address;
   chainId?: number;
@@ -15,6 +29,12 @@ type WalletContextValue = {
   switchNetwork: () => Promise<void>;
 };
 
+function walletProvider(): EthereumProvider | undefined {
+  const injected = window.ethereum;
+  const providers = injected?.providers;
+  return providers?.find((provider) => provider.isRabby) ?? injected;
+}
+
 const WalletContext = createContext<WalletContextValue | undefined>(undefined);
 
 export function WalletProvider({ children }: { children: React.ReactNode }) {
@@ -23,16 +43,17 @@ export function WalletProvider({ children }: { children: React.ReactNode }) {
   const [balance, setBalance] = useState<bigint | undefined>();
 
   const refreshChain = useCallback(async () => {
-    const id = await window.ethereum?.request({ method: "eth_chainId" });
+    const id = await walletProvider()?.request({ method: "eth_chainId" });
     if (id) setChainId(Number.parseInt(String(id), 16));
   }, []);
 
   const refreshBalance = useCallback(async (walletAddress?: Address) => {
-    if (!walletAddress || !window.ethereum) {
+    const provider = walletProvider();
+    if (!walletAddress || !provider) {
       setBalance(undefined);
       return;
     }
-    const raw = await window.ethereum.request({
+    const raw = await provider.request({
       method: "eth_getBalance",
       params: [walletAddress, "latest"]
     });
@@ -44,8 +65,9 @@ export function WalletProvider({ children }: { children: React.ReactNode }) {
   }, []);
 
   const connect = useCallback(async () => {
-    if (!window.ethereum) throw new Error("Install MetaMask to connect.");
-    const accounts = await window.ethereum.request({ method: "eth_requestAccounts" });
+    const provider = walletProvider();
+    if (!provider) throw new Error("Install Rabby or another EVM wallet to connect.");
+    const accounts = await provider.request({ method: "eth_requestAccounts" });
     const nextAddress = accounts?.[0] as Address | undefined;
     setAddress(nextAddress);
     await refreshChain();
@@ -58,15 +80,16 @@ export function WalletProvider({ children }: { children: React.ReactNode }) {
   }, []);
 
   const switchNetwork = useCallback(async () => {
-    if (!window.ethereum) throw new Error("Install MetaMask to connect.");
+    const provider = walletProvider();
+    if (!provider) throw new Error("Install Rabby or another EVM wallet to connect.");
     try {
-      await window.ethereum.request({
+      await provider.request({
         method: "wallet_switchEthereumChain",
         params: [{ chainId: chainIdHex() }]
       });
     } catch (error: any) {
       if (error?.code !== 4902) throw error;
-      await window.ethereum.request({
+      await provider.request({
         method: "wallet_addEthereumChain",
         params: [
           {
@@ -84,7 +107,8 @@ export function WalletProvider({ children }: { children: React.ReactNode }) {
   }, [address, refreshBalance, refreshChain]);
 
   useEffect(() => {
-    if (!window.ethereum) return;
+    const provider = walletProvider();
+    if (!provider) return;
     refreshChain();
     const onAccounts = (accounts: string[]) => {
       const nextAddress = accounts?.[0] as Address | undefined;
@@ -95,11 +119,11 @@ export function WalletProvider({ children }: { children: React.ReactNode }) {
       setChainId(Number.parseInt(id, 16));
       void refreshBalance(address);
     };
-    window.ethereum.on?.("accountsChanged", onAccounts);
-    window.ethereum.on?.("chainChanged", onChain);
+    provider.on?.("accountsChanged", onAccounts);
+    provider.on?.("chainChanged", onChain);
     return () => {
-      window.ethereum?.removeListener?.("accountsChanged", onAccounts);
-      window.ethereum?.removeListener?.("chainChanged", onChain);
+      provider.removeListener?.("accountsChanged", onAccounts);
+      provider.removeListener?.("chainChanged", onChain);
     };
   }, [address, refreshBalance, refreshChain]);
 
