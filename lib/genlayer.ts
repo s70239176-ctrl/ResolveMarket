@@ -74,10 +74,9 @@ export async function createWriteClient(address: Address) {
     account: address,
     provider
   });
-  // Keep the explicit-chain fallback for older SDK releases and custom Studio networks.
-  if (typeof client.connect === "function" && ACTIVE_NETWORK.name !== "studio-dev") {
-    await client.connect(ACTIVE_NETWORK.name === "localnet" ? "studionet" : ACTIVE_NETWORK.name);
-  }
+  // Do not call the SDK's connect helper here. Older SDKs probe MetaMask
+  // Snap methods that Rabby does not implement. WalletProvider handles the
+  // explicit chain switch through the standard EIP-1193 methods.
   return client;
 }
 
