@@ -148,7 +148,7 @@ export async function getWithdrawable(user: Address): Promise<bigint> {
 }
 
 export async function stakeMarket(account: Address, id: number, side: MarketSide, amountWei: bigint) {
-  return writeContract(account, "stake", [id, side], amountWei);
+  return writeContract(account, "stake", [id, side, amountWei]);
 }
 
 export async function resolveMarket(account: Address, id: number) {
@@ -190,13 +190,28 @@ export function formatGEN(value: bigint | number | string | undefined): string {
 }
 
 export function humanizeError(error: unknown): string {
-  const message = error instanceof Error ? error.message : String(error);
-  if (/user rejected|rejected/i.test(message)) return "Transaction rejected in wallet.";
-  if (/insufficient/i.test(message)) return "Insufficient testnet GEN for stake plus fees.";
-  if (/deadline|resolve after/i.test(message)) return "This market cannot be resolved until after the deadline.";
-  if (/not clearly finished|winner.*0|inconclusive/i.test(message)) return "The official page does not clearly show a final result yet.";
-  if (/wrong network|chain.?id|chain mismatch|does not match|configured chain/i.test(message)) {
+  const errorObject = error as any;
+  const message =
+    error instanceof Error
+      ? error.message
+      : errorObject?.shortMessage || errorObject?.details || errorObject?.message || errorObject?.cause?.message;
+  const fallback = (() => {
+    if (message) return String(message);
+    if (error && typeof error === "object") {
+      try {
+        return JSON.stringify(error, (_, value) => (typeof value === "bigint" ? value.toString() : value));
+      } catch {
+        return "Transaction failed with an unreadable error object.";
+      }
+    }
+    return String(error);
+  })();
+  if (/user rejected|rejected/i.test(fallback)) return "Transaction rejected in wallet.";
+  if (/insufficient/i.test(fallback)) return "Insufficient testnet GEN for stake plus fees.";
+  if (/deadline|resolve after/i.test(fallback)) return "This market cannot be resolved until after the deadline.";
+  if (/not clearly finished|winner.*0|inconclusive/i.test(fallback)) return "The official page does not clearly show a final result yet.";
+  if (/wrong network|chain.?id|chain mismatch|does not match|configured chain/i.test(fallback)) {
     return `Wrong network. Switch MetaMask to the configured GenLayer network (chain ${ACTIVE_NETWORK.chainId}).`;
   }
-  return message;
+  return fallback;
 }
