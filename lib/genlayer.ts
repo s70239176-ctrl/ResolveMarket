@@ -177,6 +177,8 @@ export function humanizeError(error: unknown): string {
   if (/insufficient/i.test(message)) return "Insufficient testnet GEN for stake plus fees.";
   if (/deadline|resolve after/i.test(message)) return "This market cannot be resolved until after the deadline.";
   if (/not clearly finished|winner.*0|inconclusive/i.test(message)) return "The official page does not clearly show a final result yet.";
-  if (/network|chain/i.test(message)) return "Wrong network. Switch MetaMask to the configured GenLayer network.";
+  if (/wrong network|chain.?id|chain mismatch|does not match|configured chain/i.test(message)) {
+    return `Wrong network. Switch MetaMask to the configured GenLayer network (chain ${ACTIVE_NETWORK.chainId}).`;
+  }
   return message;
 }
