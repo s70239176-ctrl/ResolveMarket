@@ -93,9 +93,11 @@ export async function writeContract(
   const call: any = {
     address: requireAddress(),
     functionName,
-    args
+    args,
+    // genlayer-js 0.19.x converts this field with BigInt internally and
+    // throws when it is omitted, even for non-payable methods.
+    value: value ?? 0n
   };
-  if (value && value > 0n) call.value = value;
   // Fee estimation was added after the SDK version used by Studio-dev.
   // Use it when available, but keep older Studio clients on their native
   // write path instead of calling an undefined method.
