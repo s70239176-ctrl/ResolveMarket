@@ -1,41 +1,38 @@
-# v0.3.0
-# { "Depends": "py-genlayer:5jycge4q8k23462jtb0b9fyey1s9qz928sz2nbrd9mg4sxqg2qng" }
-import genlayer as gl
-from genlayer.types import *
-
-from datetime import datetime, timezone
+# v0.2.16
+# { "Depends": "py-genlayer:1jb45aa8ynh2a9c9xn3b7qqh8sm5q93hwfp7jqmwsfhh8jpz09h6" }
+from genlayer import *
 import json
 
 
-class Contract(gl.contract.Contract):
+class Contract(gl.Contract):
     owner: Address
     market_count: u64
 
-    questions: gl.storage.TreeMap[str, str]
-    descriptions: gl.storage.TreeMap[str, str]
-    source_urls: gl.storage.TreeMap[str, str]
-    source_names: gl.storage.TreeMap[str, str]
-    yes_labels: gl.storage.TreeMap[str, str]
-    no_labels: gl.storage.TreeMap[str, str]
-    deadlines: gl.storage.TreeMap[str, u64]
-    yes_pools: gl.storage.TreeMap[str, u256]
-    no_pools: gl.storage.TreeMap[str, u256]
-    resolved: gl.storage.TreeMap[str, bool]
-    winners: gl.storage.TreeMap[str, u256]
-    resolution_excerpts: gl.storage.TreeMap[str, str]
-    cancelled: gl.storage.TreeMap[str, bool]
+    questions: TreeMap[str, str]
+    descriptions: TreeMap[str, str]
+    source_urls: TreeMap[str, str]
+    source_names: TreeMap[str, str]
+    yes_labels: TreeMap[str, str]
+    no_labels: TreeMap[str, str]
+    deadlines: TreeMap[str, u64]
+    yes_pools: TreeMap[str, u256]
+    no_pools: TreeMap[str, u256]
+    resolved: TreeMap[str, bool]
+    winners: TreeMap[str, u256]
+    resolution_excerpts: TreeMap[str, str]
+    cancelled: TreeMap[str, bool]
 
-    stake_yes: gl.storage.TreeMap[str, u256]
-    stake_no: gl.storage.TreeMap[str, u256]
-    claimed: gl.storage.TreeMap[str, bool]
-    withdrawable: gl.storage.TreeMap[str, u256]
+    stake_yes: TreeMap[str, u256]
+    stake_no: TreeMap[str, u256]
+    claimed: TreeMap[str, bool]
+    withdrawable: TreeMap[str, u256]
 
     def __init__(self):
         self.owner = gl.message.sender_address
         self.market_count = u64(0)
 
     def _now(self) -> u64:
-        return u64(int(datetime.now(timezone.utc).timestamp()))
+        return u64(gl.message.timestamp)
 
     def _market_key(self, market_id: u64) -> str:
         return str(market_id)
@@ -215,7 +212,7 @@ class Contract(gl.contract.Contract):
             raise gl.vm.UserError("already cancelled")
         self.cancelled[key] = True
 
-    @gl.public.write.payable
+    @gl.public.write
     def stake(self, market_id: u64, side: u8) -> None:
         self._require_market(market_id)
         if side != 1 and side != 2:
@@ -256,7 +253,7 @@ class Contract(gl.contract.Contract):
         yes_label = self.yes_labels[market_key]
         no_label = self.no_labels[market_key]
 
-        def nondet() -> str:
+        def resolve_with_web() -> str:
             page = gl.nondet.web.render(source_url, mode="text")
             task = f"""
 You are resolving a testnet prediction market using only the official page text below.
@@ -283,7 +280,7 @@ Official page text:
                 sort_keys=True,
             )
 
-        result_json = json.loads(gl.eq_principle.strict_eq(nondet))
+        result_json = json.loads(gl.eq_principle.strict_eq(resolve_with_web))
         if result_json["winner"] == 0:
             raise gl.vm.UserError("event not clearly finished on source page")
 

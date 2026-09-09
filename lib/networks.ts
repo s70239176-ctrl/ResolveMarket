@@ -9,7 +9,7 @@ export type ResolveNetwork = {
   faucetUrl?: string;
 };
 
-const selected = (process.env.NEXT_PUBLIC_NETWORK ?? "bradbury") as NetworkName;
+const selected = (process.env.NEXT_PUBLIC_NETWORK ?? "studionet") as NetworkName;
 
 const fallbackChainIds: Record<NetworkName, number> = {
   bradbury: 4221,
