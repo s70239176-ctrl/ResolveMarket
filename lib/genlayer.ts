@@ -58,7 +58,9 @@ export async function createWriteClient(address: Address) {
     account: address,
     provider: window.ethereum
   });
-  if (typeof client.connect === "function") {
+  // Older genlayer-js releases do not register a named studio-dev preset.
+  // The custom chain above is already bound to the Studio-dev RPC.
+  if (typeof client.connect === "function" && ACTIVE_NETWORK.name !== "studio-dev") {
     await client.connect(ACTIVE_NETWORK.name === "localnet" ? "studionet" : ACTIVE_NETWORK.name);
   }
   return client;
