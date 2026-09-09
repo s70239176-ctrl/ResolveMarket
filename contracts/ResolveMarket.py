@@ -1,6 +1,7 @@
 # v0.2.16
 # { "Depends": "py-genlayer:1jb45aa8ynh2a9c9xn3b7qqh8sm5q93hwfp7jqmwsfhh8jpz09h6" }
 from genlayer import *
+from datetime import datetime, timezone
 import json
 
 
@@ -32,7 +33,7 @@ class Contract(gl.Contract):
         self.market_count = u64(0)
 
     def _now(self) -> u64:
-        return u64(gl.message.timestamp)
+        return u64(int(datetime.now(timezone.utc).timestamp()))
 
     def _market_key(self, market_id: u64) -> str:
         return str(market_id)
@@ -213,11 +214,11 @@ class Contract(gl.Contract):
         self.cancelled[key] = True
 
     @gl.public.write
-    def stake(self, market_id: u64, side: u8) -> None:
+    def stake(self, market_id: u64, side: u8, amount: u256) -> None:
         self._require_market(market_id)
         if side != 1 and side != 2:
             raise gl.vm.UserError("side must be 1 or 2")
-        value = gl.message.value
+        value = amount
         if value <= u256(0):
             raise gl.vm.UserError("stake value required")
 

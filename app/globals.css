@@ -4,7 +4,17 @@
 
 :root {
   color-scheme: light;
-  background: #f8f7f3;
+  --bg: #f2f0e9;
+  --surface: #faf9f5;
+  --ink: #101010;
+  --ink-muted: #55524d;
+  --ink-faint: #8b8881;
+  --rule: #181818;
+  --rule-soft: rgba(16, 16, 16, 0.16);
+  --red: #e32219;
+  --red-dark: #a91711;
+  --red-soft: #f4d9d5;
+  background: var(--bg);
 }
 
 * {
@@ -17,8 +27,9 @@ html {
 
 body {
   margin: 0;
-  background: #f8f7f3;
-  color: #141516;
+  background: var(--bg);
+  color: var(--ink);
+  font-family: Arial, Helvetica, sans-serif;
 }
 
 a {
@@ -34,5 +45,45 @@ select {
 }
 
 .focus-ring {
-  @apply focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-steel;
+  @apply focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-red;
+}
+
+.mono {
+  font-family: "Courier New", Courier, monospace;
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
+}
+
+.display {
+  font-family: Arial, Helvetica, sans-serif;
+  letter-spacing: -0.07em;
+}
+
+.rule-top {
+  border-top: 1px solid var(--rule);
+}
+
+.rule-bottom {
+  border-bottom: 1px solid var(--rule);
+}
+
+.red-marker {
+  display: inline-block;
+  width: 8px;
+  height: 8px;
+  background: var(--red);
+  margin-right: 8px;
+}
+
+@media (prefers-reduced-motion: no-preference) {
+  a,
+  button {
+    transition: color 180ms ease, background-color 180ms ease, border-color 180ms ease, transform 180ms ease;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  html {
+    scroll-behavior: auto;
+  }
 }

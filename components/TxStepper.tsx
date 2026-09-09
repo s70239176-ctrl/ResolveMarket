@@ -1,6 +1,6 @@
 "use client";
 
-import { CheckCircle2, Circle, Loader2, XCircle } from "lucide-react";
+import { Check, Circle, Loader2, X } from "lucide-react";
 import type { TxStatus } from "@/lib/contract";
 
 const steps: TxStatus[] = ["submitted", "accepted", "finalized"];
@@ -8,31 +8,23 @@ const steps: TxStatus[] = ["submitted", "accepted", "finalized"];
 export function TxStepper({ status, error, hash }: { status: TxStatus; error?: string; hash?: string }) {
   if (status === "idle" && !error && !hash) return null;
   return (
-    <div className="rounded-md border border-line bg-white p-4 text-sm shadow-soft">
-      <div className="mb-3 font-bold">Transaction</div>
-      <div className="grid gap-2 sm:grid-cols-3">
+    <section className="rule-top mt-6 pt-4 text-sm">
+      <div className="mono mb-4 text-[10px] text-muted">TRANSACTION STATUS</div>
+      <div className="grid gap-3 sm:grid-cols-3">
         {steps.map((step) => {
           const active = status === step;
           const done = steps.indexOf(status) >= steps.indexOf(step);
           return (
             <div className="flex items-center gap-2" key={step}>
-              {status === "failed" ? (
-                <XCircle className="text-coral" size={18} aria-hidden />
-              ) : active && status !== "finalized" ? (
-                <Loader2 className="animate-spin text-steel" size={18} aria-hidden />
-              ) : done ? (
-                <CheckCircle2 className="text-mint" size={18} aria-hidden />
-              ) : (
-                <Circle className="text-ink/30" size={18} aria-hidden />
-              )}
-              <span className="capitalize">{step}</span>
+              {status === "failed" ? <X className="text-red" size={16} aria-hidden /> : active && status !== "finalized" ? <Loader2 className="animate-spin text-red" size={16} aria-hidden /> : done ? <Check size={16} aria-hidden /> : <Circle className="text-muted" size={16} aria-hidden />}
+              <span className="mono text-[10px]">{step}</span>
             </div>
           );
         })}
       </div>
-      {status === "estimating" ? <p className="mt-3 text-ink/60">Estimating GenLayer fees...</p> : null}
-      {hash ? <p className="mt-3 break-all text-ink/60">Tx: {hash}</p> : null}
-      {error ? <p className="mt-3 text-coral">{error}</p> : null}
-    </div>
+      {status === "estimating" ? <p className="mt-4 text-muted">Preparing transaction…</p> : null}
+      {hash ? <p className="mono mt-4 break-all text-[10px] text-muted">TX / {hash}</p> : null}
+      {error ? <p className="mt-4 border-l-2 border-red bg-redsoft px-3 py-2 text-sm font-bold text-red">{error}</p> : null}
+    </section>
   );
 }

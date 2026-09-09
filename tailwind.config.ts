@@ -5,16 +5,16 @@ const config: Config = {
   theme: {
     extend: {
       colors: {
-        ink: "#141516",
-        paper: "#f8f7f3",
-        line: "#d8d4ca",
-        mint: "#58b884",
-        coral: "#ee735f",
-        steel: "#42667a"
+        ink: "#101010",
+        paper: "#f2f0e9",
+        surface: "#faf9f5",
+        line: "#181818",
+        muted: "#55524d",
+        faint: "#8b8881",
+        red: "#e32219",
+        redsoft: "#f4d9d5"
       },
-      boxShadow: {
-        soft: "0 16px 45px rgba(20, 21, 22, 0.08)"
-      }
+      boxShadow: {}
     }
   },
   plugins: []
