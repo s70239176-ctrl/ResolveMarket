@@ -96,7 +96,10 @@ export async function writeContract(
     args,
     // genlayer-js 0.19.x converts this field with BigInt internally and
     // throws when it is omitted, even for non-payable methods.
-    value: value ?? 0n
+    value: value ?? 0n,
+    // The legacy client also expects this optional consensus setting to be
+    // present when it builds the transaction payload.
+    consensusMaxRotations: 0
   };
   // Fee estimation was added after the SDK version used by Studio-dev.
   // Use it when available, but keep older Studio clients on their native
