@@ -88,14 +88,18 @@ export async function writeContract(
     args
   };
   if (value && value > 0n) call.value = value;
-  const estimate = await client.estimateTransactionFeesForWrite(call);
-  const hash = await client.writeContract({
-    ...call,
-    fees: {
+  // Fee estimation was added after the SDK version used by Studio-dev.
+  // Use it when available, but keep older Studio clients on their native
+  // write path instead of calling an undefined method.
+  const writeRequest: any = { ...call };
+  if (typeof client.estimateTransactionFeesForWrite === "function") {
+    const estimate = await client.estimateTransactionFeesForWrite(call);
+    writeRequest.fees = {
       distribution: estimate.distribution,
       feeValue: estimate.feeValue
-    }
-  });
+    };
+  }
+  const hash = await client.writeContract(writeRequest);
   const receipt =
     typeof client.waitForFinalization === "function"
       ? await client.waitForFinalization({ hash })
