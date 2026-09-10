@@ -19,6 +19,7 @@ export function MarketCard({ market }: { market: Market }) {
       <div className="min-w-0">
         <div className="mono mb-3 flex items-center text-[10px] text-muted"><span className={closed ? "mr-2 h-2 w-2 bg-ink" : "red-marker"} />{status} / {market.source_name}</div>
         <h2 className="max-w-2xl text-xl font-black leading-tight md:text-2xl">{market.question}</h2>
+        {market.resolved ? <p className="mt-3 text-sm font-black uppercase tracking-[0.12em] text-red">Verdict reached / {market.winner === 1 ? market.yes_label : market.no_label}</p> : market.cancelled ? <p className="mt-3 text-sm font-black uppercase tracking-[0.12em] text-muted">Verdict void / market cancelled</p> : null}
         <div className="mt-4 flex flex-wrap gap-x-5 gap-y-1 text-xs font-bold uppercase tracking-[0.1em] text-muted">
           <span>Deadline {deadlineLabel(market.deadline)}</span>
           {!closed ? <span>{timeLeft(market.deadline)}</span> : null}
