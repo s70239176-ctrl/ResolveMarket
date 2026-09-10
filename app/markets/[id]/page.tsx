@@ -39,9 +39,17 @@ export default function MarketDetail({ params }: { params: { id: string } }) {
     try {
       const tx = await action();
       setHash(tx.hash); setStatus("finalized");
-      try { await load(); } catch (refreshError) { setError(`Transaction finalized, but refresh failed: ${humanizeError(refreshError)}`); }
+      try {
+        // Studio can briefly serve the previous accepted state after a
+        // resolution receipt. Poll a few times so the verdict becomes visible.
+        for (let attempt = 0; attempt < 5; attempt += 1) {
+          await load();
+          if (attempt < 4) await new Promise((resolve) => setTimeout(resolve, 1500));
+        }
+      } catch (refreshError) { setError(`Transaction finalized, but refresh failed: ${humanizeError(refreshError)}`); }
     } catch (err) { setStatus("failed"); setError(humanizeError(err)); }
   }
+
 
   function handleStake() {
     if (!wallet.address) return setError("Connect your wallet before taking a position.");
