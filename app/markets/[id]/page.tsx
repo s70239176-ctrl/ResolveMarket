@@ -5,7 +5,7 @@ import { ArrowUpRight, RotateCw } from "lucide-react";
 import { TxStepper } from "@/components/TxStepper";
 import { useWallet } from "@/components/WalletProvider";
 import type { Market, MarketSide, Stake, TxStatus } from "@/lib/contract";
-import { claimMarket, formatGEN, getClaimable, getMarket, getStake, getWithdrawable, humanizeError, parseGEN, resolveMarket, stakeMarket, withdraw } from "@/lib/genlayer";
+import { appealTransaction, claimMarket, formatGEN, getAppealStatus, getClaimable, getMarket, getStake, getWithdrawable, humanizeError, parseGEN, resolveMarket, stakeMarket, withdraw } from "@/lib/genlayer";
 import { deadlineLabel, timeLeft } from "@/lib/time";
 import { txExplorerUrl } from "@/lib/networks";
 
@@ -20,6 +20,9 @@ export default function MarketDetail({ params }: { params: { id: string } }) {
   const [side, setSide] = useState<MarketSide>(1);
   const [status, setStatus] = useState<TxStatus>("idle");
   const [hash, setHash] = useState("");
+  const [resolutionTx, setResolutionTx] = useState("");
+  const [appealCharge, setAppealCharge] = useState<bigint>();
+  const [appealAvailable, setAppealAvailable] = useState(false);
   const [error, setError] = useState("");
 
   const load = useCallback(async () => {
@@ -34,11 +37,25 @@ export default function MarketDetail({ params }: { params: { id: string } }) {
 
   useEffect(() => { load().catch((err) => setError(humanizeError(err))); }, [load]);
 
-  async function runWrite(action: () => Promise<{ hash: string }>) {
+  useEffect(() => {
+    const saved = window.localStorage.getItem(`resolve:resolution:${id}`) ?? "";
+    setResolutionTx(saved);
+    if (!wallet.address || !saved) return;
+    getAppealStatus(wallet.address, saved).then((result) => {
+      setAppealAvailable(result.canAppeal);
+      setAppealCharge(result.charge);
+    }).catch(() => setAppealAvailable(false));
+  }, [id, wallet.address]);
+
+  async function runWrite(action: () => Promise<{ hash: string }>, kind: "resolve" | "write" = "write") {
     setError(""); setStatus("estimating"); setHash("");
     try {
       const tx = await action();
       setHash(tx.hash); setStatus("finalized");
+      if (kind === "resolve") {
+        setResolutionTx(tx.hash);
+        window.localStorage.setItem(`resolve:resolution:${id}`, tx.hash);
+      }
       try {
         // Studio can briefly serve the previous accepted state after a
         // resolution receipt. Poll a few times so the verdict becomes visible.
@@ -48,6 +65,16 @@ export default function MarketDetail({ params }: { params: { id: string } }) {
         }
       } catch (refreshError) { setError(`Transaction finalized, but refresh failed: ${humanizeError(refreshError)}`); }
     } catch (err) { setStatus("failed"); setError(humanizeError(err)); }
+  }
+
+  async function appeal() {
+    if (!wallet.address || !resolutionTx) return;
+    try {
+      await runWrite(() => appealTransaction(wallet.address!, resolutionTx));
+      setAppealAvailable(false);
+    } catch (err) {
+      setError(humanizeError(err));
+    }
   }
 
 
@@ -83,9 +110,9 @@ export default function MarketDetail({ params }: { params: { id: string } }) {
         <div className="border-t border-ink pt-5 lg:border-l lg:border-t-0 lg:pl-10"><p className="mono text-xs text-red">THE EVIDENCE</p><div className="mt-6 border-y border-ink"><div className="flex justify-between py-4"><span className="mono text-[10px] text-muted">SOURCE 01</span><span className="mono text-[10px] text-muted">AVAILABLE</span></div><a className="block border-t border-black/20 py-5 text-xl font-black hover:text-red" href={market.source_url} target="_blank" rel="noreferrer">{market.source_name} <ArrowUpRight className="inline" size={18} /></a><div className="border-t border-black/20 py-5"><div className="mono text-[10px] text-muted">RESOLUTION METHOD</div><div className="mt-5 grid gap-3 text-sm font-bold"><span>PUBLIC SOURCE</span><span className="text-red">↓ CONTENT EXTRACTION</span><span className="text-red">↓ VALIDATOR CONSENSUS</span><span>↓ VERDICT</span></div></div></div><div className="mt-8"><div className="mono text-[10px] text-muted">DEADLINE</div><div className="mt-2 text-xl font-black">{closed ? "DEADLINE REACHED" : timeLeft(market.deadline)}</div></div></div>
       </section>
 
-      {market.resolved || market.cancelled ? <section aria-live="polite" className="border-y border-ink bg-ink px-5 py-10 text-paper md:px-8 md:py-14"><p className="mono text-xs text-red">VERDICT REACHED / CASE CLOSED</p><div className="display mt-5 text-[clamp(5rem,15vw,14rem)] font-black uppercase leading-[0.75]">{market.cancelled ? "VOID" : market.winner === 1 ? market.yes_label : market.no_label}</div><p className="mono mt-8 text-xs text-paper/60">{market.cancelled ? "No position wins. Principal remains claimable according to the contract." : `The recorded outcome is ${market.winner === 1 ? market.yes_label : market.no_label}.`}</p>{market.resolution_excerpt ? <p className="mt-8 max-w-2xl border-l-2 border-red pl-4 text-lg text-paper/70">“{market.resolution_excerpt}”</p> : null}</section> : null}
+      {market.resolved || market.cancelled ? <section aria-live="polite" className="border-y border-ink bg-ink px-5 py-10 text-paper md:px-8 md:py-14"><p className="mono text-xs text-red">VERDICT REACHED / CASE CLOSED</p><div className="display mt-5 text-[clamp(5rem,15vw,14rem)] font-black uppercase leading-[0.75]">{market.cancelled ? "VOID" : market.winner === 1 ? market.yes_label : market.no_label}</div><p className="mono mt-8 text-xs text-paper/60">{market.cancelled ? "No position wins. Principal remains claimable according to the contract." : `The recorded outcome is ${market.winner === 1 ? market.yes_label : market.no_label}.`}</p>{market.resolution_excerpt ? <p className="mt-8 max-w-2xl border-l-2 border-red pl-4 text-lg text-paper/70">“{market.resolution_excerpt}”</p> : null}{appealAvailable ? <div className="mt-10 border-t border-paper/30 pt-5"><p className="mono text-[10px] text-red">APPEAL WINDOW OPEN</p><p className="mt-2 max-w-xl text-paper/70">Challenge this consensus with a fresh validator review. Current appeal charge: {formatGEN(appealCharge ?? 0n)}.</p><button className="focus-ring mt-4 border border-red px-4 py-3 text-xs font-bold uppercase tracking-[0.12em] text-red hover:bg-red hover:text-white" onClick={appeal}>Appeal verdict</button></div> : null}</section> : null}
 
-      <section className="grid gap-10 border-t border-ink py-10 lg:grid-cols-[1fr_1fr]"><div><p className="mono text-xs text-red">SETTLEMENT</p><h2 className="display mt-4 text-5xl font-black uppercase leading-none">Credit and withdraw your result.</h2>{market.resolved ? <p className="mt-6 border-l-2 border-red pl-4 text-lg font-black">The verdict is recorded: {market.winner === 1 ? market.yes_label : market.no_label}.</p> : market.cancelled ? <p className="mt-6 border-l-2 border-red pl-4 text-lg font-black">This case was cancelled and marked void.</p> : null}</div><div><button className="focus-ring flex w-full items-center justify-between border-b border-ink py-5 text-left text-lg font-black hover:text-red disabled:cursor-not-allowed disabled:text-muted" disabled={disabled || claimable === 0n} onClick={() => wallet.address && runWrite(() => claimMarket(wallet.address!, id))}>Credit claim <span>{formatGEN(claimable)} <ArrowUpRight className="inline" size={18} /></span></button><button className="focus-ring flex w-full items-center justify-between border-b border-ink py-5 text-left text-lg font-black hover:text-red disabled:cursor-not-allowed disabled:text-muted" disabled={disabled || withdrawable === 0n} onClick={() => wallet.address && runWrite(() => withdraw(wallet.address!))}>Withdraw <span>{formatGEN(withdrawable)} <ArrowUpRight className="inline" size={18} /></span></button><button className="focus-ring mt-8 inline-flex items-center gap-2 border border-ink px-4 py-3 text-sm font-bold uppercase tracking-[0.12em] hover:bg-ink hover:text-white" disabled={disabled || !closed || market.resolved || market.cancelled} onClick={() => wallet.address && runWrite(() => resolveMarket(wallet.address!, id))}><RotateCw size={15} /> Request resolution</button><TxStepper status={status} error={error} hash={txExplorerUrl(hash) ?? hash} /></div></section>
+      <section className="grid gap-10 border-t border-ink py-10 lg:grid-cols-[1fr_1fr]"><div><p className="mono text-xs text-red">SETTLEMENT</p><h2 className="display mt-4 text-5xl font-black uppercase leading-none">Credit and withdraw your result.</h2>{market.resolved ? <p className="mt-6 border-l-2 border-red pl-4 text-lg font-black">The verdict is recorded: {market.winner === 1 ? market.yes_label : market.no_label}.</p> : market.cancelled ? <p className="mt-6 border-l-2 border-red pl-4 text-lg font-black">This case was cancelled and marked void.</p> : null}</div><div><button className="focus-ring flex w-full items-center justify-between border-b border-ink py-5 text-left text-lg font-black hover:text-red disabled:cursor-not-allowed disabled:text-muted" disabled={disabled || claimable === 0n} onClick={() => wallet.address && runWrite(() => claimMarket(wallet.address!, id))}>Credit claim <span>{formatGEN(claimable)} <ArrowUpRight className="inline" size={18} /></span></button><button className="focus-ring flex w-full items-center justify-between border-b border-ink py-5 text-left text-lg font-black hover:text-red disabled:cursor-not-allowed disabled:text-muted" disabled={disabled || withdrawable === 0n} onClick={() => wallet.address && runWrite(() => withdraw(wallet.address!))}>Withdraw <span>{formatGEN(withdrawable)} <ArrowUpRight className="inline" size={18} /></span></button><button className="focus-ring mt-8 inline-flex items-center gap-2 border border-ink px-4 py-3 text-sm font-bold uppercase tracking-[0.12em] hover:bg-ink hover:text-white" disabled={disabled || !closed || market.resolved || market.cancelled} onClick={() => wallet.address && runWrite(() => resolveMarket(wallet.address!, id), "resolve")}><RotateCw size={15} /> Request resolution</button><TxStepper status={status} error={error} hash={txExplorerUrl(hash) ?? hash} /></div></section>
     </main>
   );
 }

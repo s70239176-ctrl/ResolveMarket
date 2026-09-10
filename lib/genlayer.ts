@@ -131,6 +131,27 @@ export async function writeContract(
   return { hash, receipt };
 }
 
+export async function getAppealStatus(account: Address, txId: string): Promise<{ canAppeal: boolean; charge?: bigint }> {
+  const client = await createWriteClient(account) as any;
+  if (typeof client.canAppeal !== "function") return { canAppeal: false };
+  const canAppeal = await client.canAppeal({ txId });
+  if (!canAppeal || typeof client.getAppealCharge !== "function") return { canAppeal };
+  return { canAppeal, charge: toBigInt(await client.getAppealCharge({ txId })) };
+}
+
+export async function appealTransaction(account: Address, txId: string): Promise<{ hash: string; receipt: any }> {
+  const client = await createWriteClient(account) as any;
+  if (typeof client.appealTransaction !== "function") {
+    throw new Error("Appeals are not available in the connected GenLayer Studio client.");
+  }
+  const charge = typeof client.getAppealCharge === "function" ? toBigInt(await client.getAppealCharge({ txId })) : undefined;
+  const hash = await client.appealTransaction({ txId, ...(charge === undefined ? {} : { value: charge }) });
+  const receipt = typeof client.waitForFinalization === "function"
+    ? await client.waitForFinalization({ hash })
+    : await client.waitForTransactionReceipt({ hash, waitUntil: "finalized" });
+  return { hash, receipt };
+}
+
 export async function listMarkets(): Promise<Market[]> {
   if (!CONTRACT_ADDRESS) return [];
   const raw = await readContract<any[] | string>("list_markets");
