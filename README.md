@@ -9,7 +9,7 @@ flowchart LR
   SDK --> IC[ResolveMarket.py]
   IC --> WEB[Official source page]
   IC --> LLM[GenLayer LLM consensus]
-  IC --> PAY[Claim credits withdrawable balance]
+  IC --> PAY[Claim credits and transfers winnings]
 ```
 
 ## Prerequisites
@@ -61,7 +61,7 @@ Import the repo in Vercel, add the environment variables above, and deploy. No b
 
 After the deadline, anyone can call `resolve(market_id)`. The contract renders `source_url` in text mode, prompts an LLM to return JSON only, and asks validators to accept the leader result only when the extracted winner is structurally valid and agrees with their own source-grounded extraction. If the page is inconclusive, winner `0` raises `event not clearly finished on source page` and the market remains unresolved.
 
-Payouts use the schema-safe withdrawable balance path in this repo. Stakes enter through the legacy `@gl.public.write` payable method, `claim(market_id)` computes the pro-rata amount and credits `withdrawable[user]`, and `withdraw()` clears and returns that amount for the demo UI. GenLayer's documented native transfer pattern uses an EVM recipient interface with `emit_transfer(value=amount)`; that interface was intentionally left out because the current Studio schema loader in this environment rejected contracts before schema generation when helper interfaces were present.
+Payouts use a two-step path. `claim(market_id)` computes the pro-rata amount and credits `withdrawable[user]`; `withdraw()` clears that credit and sends the same amount to the caller through GenLayer's EVM recipient interface. Deploy this contract before testing withdrawals, and make sure the contract has enough testnet GEN to fund payouts.
 
 ## Test plan
 

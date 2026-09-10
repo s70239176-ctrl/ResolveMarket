@@ -5,6 +5,15 @@ from datetime import datetime, timezone
 import json
 
 
+@gl.evm.contract_interface
+class _Recipient:
+    class View:
+        pass
+
+    class Write:
+        pass
+
+
 class Contract(gl.Contract):
     owner: Address
     market_count: u64
@@ -314,4 +323,5 @@ Official page text:
         if amount <= u256(0):
             raise gl.vm.UserError("nothing withdrawable")
         self.withdrawable[user_balance_key] = u256(0)
+        _Recipient(user).emit_transfer(value=u256(amount))
         return u256(amount)
