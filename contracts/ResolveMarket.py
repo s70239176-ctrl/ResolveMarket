@@ -300,37 +300,27 @@ BACKUP SOURCE TEXT:
             start = raw.find("{")
             end = raw.rfind("}")
             if start < 0 or end <= start:
-                return json.dumps(
-                    {"winner": 0, "excerpt": "", "reason": "Resolver returned no JSON result."},
-                    sort_keys=True,
-                )
+                return "0"
             try:
                 parsed = json.loads(raw[start : end + 1])
             except Exception:
-                return json.dumps(
-                    {"winner": 0, "excerpt": "", "reason": "Resolver returned malformed JSON."},
-                    sort_keys=True,
-                )
+                return "0"
             winner = parsed.get("winner", 0)
             if winner != 1 and winner != 2 and winner != 0:
                 winner = 0
-            excerpt = str(parsed.get("excerpt", ""))[:240]
-            reason = str(parsed.get("reason", ""))[:180]
-            return json.dumps(
-                {"winner": winner, "excerpt": excerpt, "reason": reason},
-                sort_keys=True,
-            )
+            # Consensus must compare the decision code, not LLM wording.
+            return str(winner)
 
-        result_json = json.loads(gl.eq_principle.strict_eq(resolve_with_web))
-        if result_json["winner"] == 0:
+        winner = int(gl.eq_principle.strict_eq(resolve_with_web))
+        if winner == 0:
             self.resolution_status[market_key] = "undetermined"
-            self.resolution_excerpts[market_key] = result_json.get("reason", "The evidence did not clearly establish a winner.")
+            self.resolution_excerpts[market_key] = "Validators could not establish a clear final result from the primary and backup evidence sources."
             return
 
         self.resolved[market_key] = True
-        self.winners[market_key] = u256(result_json["winner"])
+        self.winners[market_key] = u256(winner)
         self.resolution_status[market_key] = "resolved"
-        self.resolution_excerpts[market_key] = result_json["excerpt"]
+        self.resolution_excerpts[market_key] = "Validators agreed on this outcome after checking the primary and backup evidence sources."
 
     @gl.public.write
     def claim(self, market_id: u64) -> u256:
