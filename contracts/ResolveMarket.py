@@ -29,6 +29,7 @@ class Contract(gl.Contract):
     no_pools: TreeMap[str, u256]
     resolved: TreeMap[str, bool]
     winners: TreeMap[str, u256]
+    resolution_status: TreeMap[str, str]
     resolution_excerpts: TreeMap[str, str]
     cancelled: TreeMap[str, bool]
 
@@ -81,6 +82,7 @@ class Contract(gl.Contract):
             "no_pool": str(self.no_pools.get(key, u256(0))),
             "resolved": self.resolved.get(key, False),
             "winner": int(self.winners.get(key, u256(0))),
+            "resolution_status": self.resolution_status.get(key, "pending"),
             "cancelled": self.cancelled.get(key, False),
         }
         if full:
@@ -207,6 +209,7 @@ class Contract(gl.Contract):
         self.no_pools[key] = u256(0)
         self.resolved[key] = False
         self.winners[key] = u256(0)
+        self.resolution_status[key] = "pending"
         self.resolution_excerpts[key] = ""
         self.cancelled[key] = False
         return market_id
@@ -305,10 +308,13 @@ Official page text:
 
         result_json = json.loads(gl.eq_principle.strict_eq(resolve_with_web))
         if result_json["winner"] == 0:
-            raise gl.vm.UserError("event not clearly finished on source page")
+            self.resolution_status[market_key] = "undetermined"
+            self.resolution_excerpts[market_key] = result_json.get("reason", "The evidence did not clearly establish a winner.")
+            return
 
         self.resolved[market_key] = True
         self.winners[market_key] = u256(result_json["winner"])
+        self.resolution_status[market_key] = "resolved"
         self.resolution_excerpts[market_key] = result_json["excerpt"]
 
     @gl.public.write

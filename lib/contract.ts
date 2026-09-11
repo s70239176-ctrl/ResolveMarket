@@ -16,6 +16,7 @@ export type Market = {
   no_pool: bigint;
   resolved: boolean;
   winner: Winner;
+  resolution_status?: "pending" | "resolved" | "undetermined" | string;
   resolution_excerpt?: string;
   cancelled: boolean;
 };
@@ -45,6 +46,7 @@ export function normalizeMarket(raw: any): Market {
     no_pool: BigInt(value.no_pool ?? 0),
     resolved: Boolean(value.resolved),
     winner: Number(value.winner ?? 0) as Winner,
+    resolution_status: String(value.resolution_status ?? (value.resolved ? "resolved" : "pending")),
     resolution_excerpt: value.resolution_excerpt ? String(value.resolution_excerpt) : "",
     cancelled: Boolean(value.cancelled)
   };

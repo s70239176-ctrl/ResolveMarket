@@ -24,6 +24,7 @@ export default function MarketDetail({ params }: { params: { id: string } }) {
   const [lastAction, setLastAction] = useState<"resolve" | "write">("write");
   const [appealCharge, setAppealCharge] = useState<bigint>();
   const [appealAvailable, setAppealAvailable] = useState(false);
+  const [undetermined, setUndetermined] = useState(false);
   const [error, setError] = useState("");
 
   const load = useCallback(async () => {
@@ -48,6 +49,16 @@ export default function MarketDetail({ params }: { params: { id: string } }) {
     }).catch(() => setAppealAvailable(false));
   }, [id, wallet.address]);
 
+  const closed = market ? Math.floor(Date.now() / 1000) >= market.deadline : false;
+
+  useEffect(() => {
+    if (!market || market.resolved || market.cancelled || !closed) return;
+    const timer = window.setInterval(() => {
+      load().catch(() => undefined);
+    }, 5000);
+    return () => window.clearInterval(timer);
+  }, [closed, load, market]);
+
   async function runWrite(action: () => Promise<{ hash: string }>, kind: "resolve" | "write" = "write") {
     setError(""); setStatus("estimating"); setHash(""); setLastAction(kind);
     try {
@@ -65,7 +76,12 @@ export default function MarketDetail({ params }: { params: { id: string } }) {
           if (attempt < 4) await new Promise((resolve) => setTimeout(resolve, 1500));
         }
       } catch (refreshError) { setError(`Transaction finalized, but refresh failed: ${humanizeError(refreshError)}`); }
-    } catch (err) { setStatus("failed"); setError(humanizeError(err)); }
+    } catch (err) {
+      const message = humanizeError(err);
+      setStatus("failed");
+      setUndetermined(kind === "resolve" && /not clearly|inconclusive|malformed JSON|no JSON/i.test(message));
+      setError(message);
+    }
   }
 
   async function appeal() {
@@ -88,7 +104,6 @@ export default function MarketDetail({ params }: { params: { id: string } }) {
   }
 
   if (!market) return <main className="mx-auto max-w-[1600px] px-5 py-20 md:px-10"><p className="mono text-xs text-muted">READING CASE FILE…</p></main>;
-  const closed = Math.floor(Date.now() / 1000) >= market.deadline;
   const disabled = !wallet.connected || wallet.wrongNetwork || status === "estimating" || status === "submitted";
   const total = market.yes_pool + market.no_pool;
   const yesShare = total > 0n ? Number((market.yes_pool * 1000n) / total) / 10 : 50;
@@ -103,7 +118,7 @@ export default function MarketDetail({ params }: { params: { id: string } }) {
 
       <section aria-live="polite" className="border-b-2 border-ink bg-paper py-7">
         <p className="mono text-xs text-red">VERDICT STATUS</p>
-        {market.cancelled ? <><h2 className="mt-3 text-3xl font-black uppercase">Void: no winner</h2><p className="mt-2 max-w-2xl text-sm text-muted">This case was cancelled. The transaction receipt below is only a record of the cancellation.</p></> : market.resolved ? <><h2 className="mt-3 text-3xl font-black uppercase">{market.winner === 1 ? market.yes_label : market.no_label} won</h2><p className="mt-2 max-w-2xl text-sm text-muted">The verdict was recorded after validator consensus. Read the evidence excerpt below, then claim and withdraw any winnings.</p></> : status === "failed" && lastAction === "resolve" ? <><h2 className="mt-3 text-3xl font-black uppercase">No verdict recorded</h2><p className="mt-2 max-w-2xl text-sm text-muted">The resolution request did not produce an accepted verdict. The case remains unresolved. Read the error below and try again with a source that clearly states the final result.</p></> : closed ? <><h2 className="mt-3 text-3xl font-black uppercase">Awaiting resolution</h2><p className="mt-2 max-w-2xl text-sm text-muted">The staking deadline has passed, but validators have not recorded a verdict yet. A transaction hash is only a receipt; it is not the result.</p></> : <><h2 className="mt-3 text-3xl font-black uppercase">No verdict yet</h2><p className="mt-2 max-w-2xl text-sm text-muted">This case is still open for positions until the deadline shown above.</p></>}
+        {market.cancelled ? <><h2 className="mt-3 text-3xl font-black uppercase">Void: no winner</h2><p className="mt-2 max-w-2xl text-sm text-muted">This case was cancelled. The transaction receipt below is only a record of the cancellation.</p></> : market.resolved ? <><h2 className="mt-3 text-3xl font-black uppercase">{market.winner === 1 ? market.yes_label : market.no_label} won</h2><p className="mt-2 max-w-2xl text-sm text-muted">The verdict was recorded after validator consensus. Read the evidence excerpt below, then claim and withdraw any winnings.</p></> : market.resolution_status === "undetermined" || undetermined ? <><h2 className="mt-3 text-3xl font-black uppercase">Undetermined: no winner</h2><p className="mt-2 max-w-2xl text-sm text-muted">The evidence did not clearly prove either outcome, so no winner was recorded. Try again with a source that states the exact final result.</p></> : status === "failed" && lastAction === "resolve" ? <><h2 className="mt-3 text-3xl font-black uppercase">No verdict recorded</h2><p className="mt-2 max-w-2xl text-sm text-muted">The resolution request did not produce an accepted verdict. The case remains unresolved. Read the error below and try again with a source that clearly states the final result.</p></> : closed ? <><h2 className="mt-3 text-3xl font-black uppercase">Awaiting resolution</h2><p className="mt-2 max-w-2xl text-sm text-muted">The staking deadline has passed, but validators have not recorded a verdict yet. Live status checks are running automatically.</p></> : <><h2 className="mt-3 text-3xl font-black uppercase">No verdict yet</h2><p className="mt-2 max-w-2xl text-sm text-muted">This case is still open for positions until the deadline shown above.</p></>}
       </section>
 
       <section className="grid gap-12 py-12 lg:grid-cols-[1.2fr_0.8fr] lg:py-20">
