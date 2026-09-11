@@ -193,7 +193,7 @@ export async function withdraw(account: Address) {
 
 export async function createMarket(
   account: Address,
-  args: [string, string, string, string, string, string, number]
+  args: [string, string, string, string, string, string, string, number]
 ) {
   return writeContract(account, "create_market", args);
 }

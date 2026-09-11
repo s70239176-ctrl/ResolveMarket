@@ -8,6 +8,7 @@ export type Market = {
   question: string;
   description?: string;
   source_url: string;
+  backup_source_url: string;
   source_name: string;
   yes_label: string;
   no_label: string;
@@ -38,6 +39,7 @@ export function normalizeMarket(raw: any): Market {
     question: String(value.question ?? ""),
     description: value.description ? String(value.description) : "",
     source_url: String(value.source_url ?? ""),
+    backup_source_url: String(value.backup_source_url ?? ""),
     source_name: String(value.source_name ?? ""),
     yes_label: String(value.yes_label ?? "Yes"),
     no_label: String(value.no_label ?? "No"),

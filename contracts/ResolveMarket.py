@@ -21,6 +21,7 @@ class Contract(gl.Contract):
     questions: TreeMap[str, str]
     descriptions: TreeMap[str, str]
     source_urls: TreeMap[str, str]
+    backup_source_urls: TreeMap[str, str]
     source_names: TreeMap[str, str]
     yes_labels: TreeMap[str, str]
     no_labels: TreeMap[str, str]
@@ -74,6 +75,7 @@ class Contract(gl.Contract):
             "id": int(market_id),
             "question": self.questions[key],
             "source_url": self.source_urls[key],
+            "backup_source_url": self.backup_source_urls.get(key, ""),
             "source_name": self.source_names[key],
             "yes_label": self.yes_labels[key],
             "no_label": self.no_labels[key],
@@ -177,6 +179,7 @@ class Contract(gl.Contract):
         question: str,
         description: str,
         source_url: str,
+        backup_source_url: str,
         source_name: str,
         yes_label: str,
         no_label: str,
@@ -186,11 +189,14 @@ class Contract(gl.Contract):
         clean_question = self._clean_str(question, "question")
         clean_description = self._clean_str(description, "description")
         clean_source_url = self._clean_str(source_url, "source_url")
+        clean_backup_source_url = self._clean_str(backup_source_url, "backup_source_url")
         clean_source_name = self._clean_str(source_name, "source_name")
         clean_yes_label = self._clean_str(yes_label, "yes_label")
         clean_no_label = self._clean_str(no_label, "no_label")
         if not self._valid_url(clean_source_url):
             raise gl.vm.UserError("source_url must be http or https")
+        if not self._valid_url(clean_backup_source_url):
+            raise gl.vm.UserError("backup_source_url must be http or https")
         if deadline <= self._now():
             raise gl.vm.UserError("deadline must be in the future")
 
@@ -201,6 +207,7 @@ class Contract(gl.Contract):
         self.questions[key] = clean_question
         self.descriptions[key] = clean_description
         self.source_urls[key] = clean_source_url
+        self.backup_source_urls[key] = clean_backup_source_url
         self.source_names[key] = clean_source_name
         self.yes_labels[key] = clean_yes_label
         self.no_labels[key] = clean_no_label
@@ -262,24 +269,32 @@ class Contract(gl.Contract):
             raise gl.vm.UserError("resolve after deadline")
 
         source_url = self.source_urls[market_key]
+        backup_source_url = self.backup_source_urls.get(market_key, "")
         question = self.questions[market_key]
         yes_label = self.yes_labels[market_key]
         no_label = self.no_labels[market_key]
 
         def resolve_with_web() -> str:
-            page = gl.nondet.web.render(source_url, mode="text")
+            primary_page = gl.nondet.web.render(source_url, mode="text")
+            backup_page = gl.nondet.web.render(backup_source_url, mode="text")
             task = f"""
-You are resolving a testnet prediction market using only the official page text below.
+You are resolving a testnet prediction market using only the evidence pages below.
 Question: {question}
 Winner 1 means: {yes_label}
 Winner 2 means: {no_label}
+Use the primary source first. Use the backup source only to confirm or resolve an
+incomplete primary source. Do not guess, and return winner 0 if neither source
+clearly states the final result for this exact event.
 Return winner 0 if the page does not clearly state a final result or announcement.
 Use only the page text. Do not use world knowledge.
 Return JSON only:
 {{"winner": 1 or 2 or 0, "excerpt": "short quote from the page, <= 240 chars", "reason": "one sentence"}}
 
-Official page text:
-{page[:12000]}
+PRIMARY SOURCE TEXT:
+{primary_page[:10000]}
+
+BACKUP SOURCE TEXT:
+{backup_page[:10000]}
 """
             raw = str(gl.nondet.exec_prompt(task)).strip()
             start = raw.find("{")
