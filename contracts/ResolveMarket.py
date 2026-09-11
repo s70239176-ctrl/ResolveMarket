@@ -278,8 +278,21 @@ Return JSON only:
 Official page text:
 {page[:12000]}
 """
-            raw = gl.nondet.exec_prompt(task).replace("```json", "").replace("```", "")
-            parsed = json.loads(raw)
+            raw = str(gl.nondet.exec_prompt(task)).strip()
+            start = raw.find("{")
+            end = raw.rfind("}")
+            if start < 0 or end <= start:
+                return json.dumps(
+                    {"winner": 0, "excerpt": "", "reason": "Resolver returned no JSON result."},
+                    sort_keys=True,
+                )
+            try:
+                parsed = json.loads(raw[start : end + 1])
+            except Exception:
+                return json.dumps(
+                    {"winner": 0, "excerpt": "", "reason": "Resolver returned malformed JSON."},
+                    sort_keys=True,
+                )
             winner = parsed.get("winner", 0)
             if winner != 1 and winner != 2 and winner != 0:
                 winner = 0

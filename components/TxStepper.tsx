@@ -5,11 +5,11 @@ import type { TxStatus } from "@/lib/contract";
 
 const steps: TxStatus[] = ["submitted", "accepted", "finalized"];
 
-export function TxStepper({ status, error, hash }: { status: TxStatus; error?: string; hash?: string }) {
+export function TxStepper({ status, error, hash, action }: { status: TxStatus; error?: string; hash?: string; action?: string }) {
   if (status === "idle" && !error && !hash) return null;
   return (
     <section className="rule-top mt-6 pt-4 text-sm">
-      <div className="mono mb-4 text-[10px] text-muted">TRANSACTION STATUS</div>
+      <div className="mono mb-4 text-[10px] text-muted">{action ? `${action} / TRANSACTION STATUS` : "TRANSACTION STATUS"}</div>
       <div className="grid gap-3 sm:grid-cols-3">
         {steps.map((step) => {
           const active = status === step;
@@ -23,7 +23,7 @@ export function TxStepper({ status, error, hash }: { status: TxStatus; error?: s
         })}
       </div>
       {status === "estimating" ? <p className="mt-4 text-muted">Preparing transaction…</p> : null}
-      {hash ? <p className="mono mt-4 break-all text-[10px] text-muted">TX / {hash}</p> : null}
+      {hash ? <p className="mono mt-4 break-all text-[10px] text-muted">Receipt reference / {hash}</p> : null}
       {error ? <p className="mt-4 border-l-2 border-red bg-redsoft px-3 py-2 text-sm font-bold text-red">{error}</p> : null}
     </section>
   );
